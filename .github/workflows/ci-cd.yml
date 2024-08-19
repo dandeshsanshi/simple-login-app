@@ -1,0 +1,46 @@
+name: Deploy to ECS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run unit tests
+      run: npm test
+
+    - name: Log in to AWS ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build and tag Docker image
+      run: |
+        docker build -t login-app:latest .
+        docker tag login-app:latest ${{ steps.login-ecr.outputs.registry }}/login-app:latest
+
+    - name: Push Docker image to ECR
+      run: |
+        docker push ${{ steps.login-ecr.outputs.registry }}/login-app:latest
+
+    - name: Update ECS service
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: "login-app-task"
+        service: "login-app-service"
+        cluster: "ecs-cluster"
+        wait-for-service-stability: true
