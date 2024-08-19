@@ -29,15 +29,17 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+        key: ${{ runner.os }}-node-${{ hashFiles('app/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
 
     - name: Install dependencies
       run: npm install
+      working-directory: ./app  # Set this if your package.json is in a subdirectory
 
     - name: Run unit tests
       run: npm test
+      working-directory: ./app  # Set this if your package.json is in a subdirectory
 
     - name: Log in to AWS ECR
       id: login-ecr
@@ -47,7 +49,7 @@ jobs:
 
     - name: Build and tag Docker image
       run: |
-        docker build -t ${{ env.ECR_REPOSITORY }}:latest .
+        docker build -t ${{ env.ECR_REPOSITORY }}:latest ./simple-login-app  # Point to the correct Dockerfile location if necessary
         docker tag ${{ env.ECR_REPOSITORY }}:latest ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
 
     - name: Push Docker image to ECR
